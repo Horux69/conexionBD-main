@@ -23,6 +23,9 @@
                 <td>{{med[0]}}</td>
                 <td>{{med[1]}}</td>
                 <td>{{med[2]}}</td>
+
+                <td><a href="/editMedico/{{med[0]}}">Editar</a></td>
+                <td><a onclick="return confirm('Seguro quiere eliminar este medico?')" href="/deleteMedico/{{med[0]}}">Borrar</a></td>
             </tr>
             {% endfor %}
         </tbody>

@@ -1,9 +1,12 @@
 import hashlib
-from flask import Flask, render_template, request, redirect, flash
+from random import randint
+from flask import Flask, render_template, request, redirect, flash, session
 from flaskext.mysql import MySQL
+from datetime import timedelta
 
 programa = Flask(__name__)
-programa.secret_key = 'clave_secreta'
+programa.secret_key = str(randint(10000, 99999))
+programa.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=30)
 mysql = MySQL()
 programa.config['MYSQL_DATABASE_HOST'] = 'localhost'
 programa.config['MYSQL_DATABASE_PORT'] = 3306
@@ -64,7 +67,7 @@ def validationLogin():
         # Establecer la conexión a la base de datos y obtener el cursor
         # Aquí deberías agregar tu código de conexión a la base de datos
 
-        consulta = f"SELECT contrasena FROM usuarios WHERE idusuario = '{idusuario}'"
+        consulta = f"SELECT contrasena, nombre FROM usuarios WHERE idusuario = '{idusuario}'"
 
         cursor.execute(consulta)
         resultado = cursor.fetchall()
@@ -72,53 +75,85 @@ def validationLogin():
 
         if len(resultado) > 0:
             if encriptada == resultado[0][0]:
-                return render_template('principal.html')
+                session["logueado"] = True
+                session["user_id"] = idusuario
+                session["user_name"] = resultado[0][1]
+                return redirect('/principal')
             else:
                 return render_template('login.html')
         else:
             return render_template('login.html')
         
+@programa.route('/principal')
+def principal():
+    if session.get("logueado"):
+        return render_template("principal.html")
+    else:
+        return render_template("login.html")
+    
+        
 @programa.route('/medicos')
 def medicos():
-    consulta = "SELECT * FROM medicos WHERE activo = 1"
+    if session.get("logueado"):
+        consulta = "SELECT * FROM medicos WHERE activo = 1"
 
-    cursor.execute(consulta)
-    resultados = cursor.fetchall()
-    conexion.commit()
+        cursor.execute(consulta)
+        resultados = cursor.fetchall()
+        conexion.commit()
 
-    return render_template('/medicos.html', res = resultados)
+        return render_template('/medicos.html', res = resultados)
+    else:
+        return render_template("login.html")
 
 @programa.route('/agregaMedico')
 def agregaMedico():
-    return render_template('agregaMedico.html')
+    if session.get("logueado"):
+        return render_template('agregaMedico.html')
+    else:
+        return render_template("login.html")
 
 @programa.route('/guardaMedico', methods = ['POST'])
 def guardaMedico():
-    id = request.form['txtId']
-    nombre = request.form['txtNombre']
-    especialidad = request.form['txtEspe']
+    if session.get("logueado"):
+        id = request.form['txtId']
+        nombre = request.form['txtNombre']
+        especialidad = request.form['txtEspe']
 
-    consultaMedicos = f"SELECT * FROM medicos WHERE idmedico = '{id}'"
+        consultaMedicos = f"SELECT * FROM medicos WHERE idmedico = '{id}'"
 
-    conexion = mysql.connect()
-    cursor = conexion.cursor()
-    cursor.execute(consultaMedicos)
+        conexion = mysql.connect()
+        cursor = conexion.cursor()
+        cursor.execute(consultaMedicos)
 
-    resultado = cursor.fetchone()
+        resultado = cursor.fetchone()
 
-    conexion.commit()
-
-    if not resultado:
-
-        consulta = f"INSERT INTO medicos (idmedico, nombre, especialidad, activo) VALUES ('{id}','{nombre}','{especialidad}', 1)"
-
-        cursor.execute(consulta)
         conexion.commit()
 
-        return redirect('/medicos')
+        if not resultado:
+
+            consulta = f"INSERT INTO medicos (idmedico, nombre, especialidad, activo) VALUES ('{id}','{nombre}','{especialidad}', 1)"
+
+            cursor.execute(consulta)
+            conexion.commit()
+
+            return redirect('/medicos')
+        
+        else: 
+            return render_template('agregaMedico.html' , men = 'ID de medico no disponible')
+    else:
+        return render_template("login.html")
     
-    else: 
-        return render_template('agregaMedico.html' , men = 'ID de medico no disponible')
+@programa.route('/deleteMedico/<id>')
+def deleteMedico(id):
+    if session.get("logueado"):
+        consulta = f"UPDATE medicos SET activo = 0 WHERE idmedico = '{id}'"
+        conexion = mysql.connect()
+        cursor = conexion.cursor()
+        cursor.execute(consulta)
+        conexion.commit()
+        return redirect('/medicos')
+    else:
+        return render_template("login.html")
 
 if __name__ == '__main__':
     programa.run(host='0.0.0.0', debug=True, port='8080')
