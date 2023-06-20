@@ -88,6 +88,38 @@ def medicos():
 
     return render_template('/medicos.html', res = resultados)
 
+@programa.route('/agregaMedico')
+def agregaMedico():
+    return render_template('agregaMedico.html')
+
+@programa.route('/guardaMedico', methods = ['POST'])
+def guardaMedico():
+    id = request.form['txtId']
+    nombre = request.form['txtNombre']
+    especialidad = request.form['txtEspe']
+
+    consultaMedicos = f"SELECT * FROM medicos WHERE idmedico = '{id}'"
+
+    conexion = mysql.connect()
+    cursor = conexion.cursor()
+    cursor.execute(consultaMedicos)
+
+    resultado = cursor.fetchone()
+
+    conexion.commit()
+
+    if not resultado:
+
+        consulta = f"INSERT INTO medicos (idmedico, nombre, especialidad, activo) VALUES ('{id}','{nombre}','{especialidad}', 1)"
+
+        cursor.execute(consulta)
+        conexion.commit()
+
+        return redirect('/medicos')
+    
+    else: 
+        return render_template('agregaMedico.html' , men = 'ID de medico no disponible')
+
 if __name__ == '__main__':
     programa.run(host='0.0.0.0', debug=True, port='8080')
 ########################################################################################
