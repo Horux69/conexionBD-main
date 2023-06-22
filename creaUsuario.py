@@ -6,7 +6,7 @@ from datetime import timedelta
 
 programa = Flask(__name__)
 programa.secret_key = str(randint(10000, 99999))
-programa.config["PERMANENT_SESSION_LIFETIME"] = timedelta(seconds=30)
+programa.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 mysql = MySQL()
 programa.config['MYSQL_DATABASE_HOST'] = 'localhost'
 programa.config['MYSQL_DATABASE_PORT'] = 3306
